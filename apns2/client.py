@@ -96,7 +96,7 @@ class APNsClient(object):
                     response.timestamp = data["timestamp"]
                     response.reason = data["reason"]
 
-                return response
+                return response, None
 
         except Exception as e:
             return None, e
