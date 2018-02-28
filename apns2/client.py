@@ -8,6 +8,7 @@ from .errors import ConnectionFailed, exception_class_for_reason
 # We don't generally need to know about the Credentials subclasses except to
 # keep the old API, where APNsClient took a cert_file
 from .credentials import CertificateCredentials
+from response import Response
 
 
 class NotificationPriority(Enum):
@@ -83,13 +84,23 @@ class APNsClient(object):
         return stream_id
 
     def get_notification_result(self, stream_id):
-        with self._connection.get_response(stream_id) as response:
-            if response.status == 200:
-                return 'Success'
-            else:
-                raw_data = response.read().decode('utf-8')
-                data = json.loads(raw_data)
-                return data['reason']
+        try:
+            with self._connection.get_response(stream_id) as apns_response:
+                apns_ids = apns_response.headers["apns-id"]
+                apns_id = apns_ids[0] if apns_ids else None
+                response = Response(status_code=apns_response.status, apns_id=apns_id)
+
+                if apns_response.status != 200:
+                    raw_data = apns_response.read().decode('utf-8')
+                    data = json.loads(raw_data)
+                    response.timestamp = data["timestamp"]
+                    response.reason = data["reason"]
+
+                return response
+
+        except Exception as e:
+            return None, e
+
 
     def send_notification_batch(self, notifications, topic=None, priority=NotificationPriority.Immediate,
                                 expiration=None, collapse_id=None):
