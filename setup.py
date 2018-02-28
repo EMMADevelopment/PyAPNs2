@@ -19,7 +19,7 @@ setup(
     version='0.3.1',
     packages=['apns2'],
     install_requires=dependencies,
-    url='https://github.com/Pr0Ger/PyAPNs2',
+    url='https://github.com/EMMADevelopment/PyAPNs2.git',
     license='MIT',
     author='Sergey Petrov',
     author_email='me@pr0ger.prg',
