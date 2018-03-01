@@ -34,10 +34,10 @@ class CertificateCredentials(Credentials):
 
 # Credentials subclass for JWT token based authentication
 class TokenCredentials(Credentials):
-    def __init__(self, auth_key_path, auth_key_id, team_id,
+    def __init__(self, auth_key, auth_key_id, team_id,
                  encryption_algorithm=DEFAULT_TOKEN_ENCRYPTION_ALGORITHM,
                  token_lifetime=DEFAULT_TOKEN_LIFETIME):
-        self.__auth_key = self._get_signing_key(auth_key_path)
+        self.__auth_key = auth_key
         self.__auth_key_id = auth_key_id
         self.__team_id = team_id
         self.__encryption_algorithm = encryption_algorithm
@@ -59,14 +59,6 @@ class TokenCredentials(Credentials):
     @staticmethod
     def _is_expired_token(issue_date):
         return time.time() > issue_date + DEFAULT_TOKEN_LIFETIME
-
-    @staticmethod
-    def _get_signing_key(key_path):
-        secret = ''
-        if key_path:
-            with open(key_path) as f:
-                secret = f.read()
-        return secret
 
     def _get_or_create_topic_token(self, topic):
         # dict of topic to issue date and JWT token
