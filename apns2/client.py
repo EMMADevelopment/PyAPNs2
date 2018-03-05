@@ -3,7 +3,7 @@ import json
 import logging
 from enum import Enum
 
-from .errors import ConnectionFailed, exception_class_for_reason
+from .errors import ConnectionFailed
 
 # We don't generally need to know about the Credentials subclasses except to
 # keep the old API, where APNsClient took a cert_file
@@ -26,12 +26,17 @@ MAX_CONNECTION_RETRIES = 3
 logger = logging.getLogger(__name__)
 
 
-class APNsClient(object):
-    SANDBOX_SERVER = 'api.development.push.apple.com'
-    LIVE_SERVER = 'api.push.apple.com'
+class APNsOptions(object):
+    def __init__(self, use_sandbox, use_alternative_port, proto, proxy_host, proxy_port, json_encoder):
+        self.use_sandbox = use_sandbox
+        self.use_alternative_port = use_alternative_port
+        self.proto = proto
+        self.proxy_host = proxy_host
+        self.proxy_port = proxy_port
+        self.json_encoder = json_encoder
 
-    DEFAULT_PORT = 443
-    ALTERNATIVE_PORT = 2197
+
+class APNsClient(object):
 
     def __init__(self, credentials, use_sandbox=False, use_alternative_port=False, proto=None, json_encoder=None,
                  password=None, proxy_host=None, proxy_port=None):
@@ -39,27 +44,53 @@ class APNsClient(object):
             self.__credentials = CertificateCredentials(credentials, password)
         else:
             self.__credentials = credentials
-        self._init_connection(use_sandbox, use_alternative_port, proto, proxy_host, proxy_port)
 
-        self.__json_encoder = json_encoder
+        self.__options = APNsOptions(use_sandbox, use_alternative_port, proto, proxy_host, proxy_port, json_encoder)
+
+    def create_connection(self):
+        connection = APNsConnection(self.__credentials, self.__options)
+        return connection
+
+
+class APNsConnection(object):
+
+    SANDBOX_SERVER = 'api.development.push.apple.com'
+    LIVE_SERVER = 'api.push.apple.com'
+
+    DEFAULT_PORT = 443
+    ALTERNATIVE_PORT = 2197
+
+    def __init__(self, credentials, options):
+        self.__credentials = credentials
+        self.__options = options
+        self._connection = None
         self.__max_concurrent_streams = None
         self.__previous_server_max_concurrent_streams = None
 
-    def _init_connection(self, use_sandbox, use_alternative_port, proto, proxy_host, proxy_port):
-        server = self.SANDBOX_SERVER if use_sandbox else self.LIVE_SERVER
-        port = self.ALTERNATIVE_PORT if use_alternative_port else self.DEFAULT_PORT
-        self._connection = self.__credentials.create_connection(server, port, proto, proxy_host, proxy_port)
+    def connect(self):
+        server = self.SANDBOX_SERVER if self.__options.use_sandbox else self.LIVE_SERVER
+        port = self.ALTERNATIVE_PORT if self.__options.use_alternative_port else self.DEFAULT_PORT
+        self._connection = self.__credentials.create_connection(server, port, self.__options.proto,
+                                                         self.__options.proxy_host, self.__options.proxy_port)
 
     def send_notification(self, token_hex, notification, topic=None, priority=NotificationPriority.Immediate,
                           expiration=None, collapse_id=None):
+        if not self.is_connected():
+            raise ConnectionFailed("Can't send push. "
+                                   "The connection with APNs has not been established: Use .connect() method")
+
         stream_id = self.send_notification_async(token_hex, notification, topic, priority, expiration, collapse_id)
         result = self.get_notification_result(stream_id)
-        if result != 'Success':
-            raise exception_class_for_reason(result)
+        return result
 
     def send_notification_async(self, token_hex, notification, topic=None, priority=NotificationPriority.Immediate,
                                 expiration=None, collapse_id=None):
-        json_str = json.dumps(notification.dict(), cls=self.__json_encoder, ensure_ascii=False, separators=(',', ':'))
+
+        if not self.is_connected():
+            raise ConnectionFailed("Can't send push. "
+                                   "The connection with APNs has not been established: Use .connect() method")
+
+        json_str = json.dumps(notification.dict(), cls=self.__options.json_encoder, ensure_ascii=False, separators=(',', ':'))
         json_payload = json_str.encode('utf-8')
 
         headers = {}
@@ -85,22 +116,29 @@ class APNsClient(object):
 
     def get_notification_result(self, stream_id):
         try:
-            with self._connection.get_response(stream_id) as apns_response:
-                apns_ids = apns_response.headers["apns-id"]
-                apns_id = apns_ids[0] if apns_ids else None
-                response = Response(status_code=apns_response.status, apns_id=apns_id)
+            apns_response = self._connection.get_response(stream_id)
 
-                if apns_response.status != 200:
-                    raw_data = apns_response.read().decode('utf-8')
-                    data = json.loads(raw_data)
-                    response.timestamp = data["timestamp"]
-                    response.reason = data["reason"]
+            apns_ids = apns_response.headers["apns-id"]
+            apns_id = apns_ids[0] if apns_ids else None
+            response = Response(status_code=apns_response.status, apns_id=apns_id)
 
-                return response, None
+            if apns_response.status != 200:
+                raw_data = apns_response.read().decode('utf-8')
+                data = json.loads(raw_data)
+                response.reason = data["reason"]
+                response.timestamp = data.get("timestamp")
+
+            return response, None
 
         except Exception as e:
             return None, e
 
+    def is_connected(self):
+        return self._connection is not None
+
+    def close(self):
+        self._connection.close()
+        self._connection = None
 
     def send_notification_batch(self, notifications, topic=None, priority=NotificationPriority.Immediate,
                                 expiration=None, collapse_id=None):
@@ -117,11 +155,16 @@ class APNsClient(object):
         if the token was sent successfully, or the string returned by APNs in the 'reason' field of
         the response, if the token generated an error.
         """
+
+        if not self.is_connected():
+            raise ConnectionFailed("Can't send push. "
+                                   "The connection with APNs has not been established: Use .connect() method")
+
         notification_iterator = iter(notifications)
         next_notification = next(notification_iterator, None)
         # Make sure we're connected to APNs, so that we receive and process the server's SETTINGS
         # frame before starting to send notifications.
-        self.connect()
+        self._connect()
 
         results = {}
         open_streams = collections.deque()
@@ -182,7 +225,7 @@ class APNsClient(object):
             logger.info('APNs set max_concurrent_streams to %s', max_concurrent_streams)
             self.__max_concurrent_streams = max_concurrent_streams
 
-    def connect(self):
+    def _connect(self):
         """
         Establish a connection to APNs. If already connected, the function does nothing. If the
         connection fails, the function retries up to MAX_CONNECTION_RETRIES times.
