@@ -6,7 +6,7 @@ import collections
 class Response(object):
 
     def __init__(
-        self, status_code, apns_id,
+        self, status_code, apns_id, token,
         timestamp=None, reason=None, error = None
     ):
 
@@ -26,6 +26,9 @@ class Response(object):
         # Notification, this will be a new unique UUID which has been created by APNs.
         self.apns_id = apns_id
 
+        # The APNs token for identifying the device.
+        self.token = token
+
         # If the value of StatusCode is 410, this is the last time at which APNs
         # confirmed that the device token was no longer valid for the topic.
         self.timestamp = timestamp
@@ -33,10 +36,11 @@ class Response(object):
         # if any error occurs when generating the response.
         self.error = error
 
+
     def __str__(self):
         if self.error is None:
-            return "APNs response: apns_id: %s, status: %s, timestamp: %s, reason: %s" \
-                   % (self.apns_id, str(self.status_code), str(self.timestamp), self.reason)
+            return "APNs response: apns_id: %s, status: %s, token: %s,timestamp: %s, reason: %s" \
+                   % (self.apns_id, str(self.status_code), self.token, str(self.timestamp), self.reason)
         else:
             return "Error getting response: %s" % (str(self.error))
 

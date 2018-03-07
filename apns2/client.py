@@ -80,7 +80,7 @@ class APNsConnection(object):
                                    "The connection with APNs has not been established: Use .connect() method")
 
         stream_id = self.send_notification_async(token_hex, notification, topic, priority, expiration, collapse_id)
-        result = self.get_notification_result(stream_id)
+        result = self.get_notification_result(stream_id, token_hex)
         return result
 
     def send_notification_async(self, token_hex, notification, topic=None, priority=NotificationPriority.Immediate,
@@ -114,12 +114,12 @@ class APNsConnection(object):
         stream_id = self._connection.request('POST', url, json_payload, headers)
         return stream_id
 
-    def get_notification_result(self, stream_id):
+    def get_notification_result(self, stream_id, token):
         apns_response = self._connection.get_response(stream_id)
 
         apns_ids = apns_response.headers["apns-id"]
         apns_id = apns_ids[0] if apns_ids else None
-        response = Response(status_code=apns_response.status, apns_id=apns_id)
+        response = Response(status_code=apns_response.status, apns_id=apns_id, token= token)
 
         try:
             if apns_response.status != 200:
@@ -191,7 +191,7 @@ class APNsConnection(object):
                 # sent new requests or exited the while loop.) Wait for the first outstanding stream
                 # to return a response.
                 pending_stream = open_streams.popleft()
-                result = self.get_notification_result(pending_stream.stream_id)
+                result = self.get_notification_result(pending_stream.stream_id, pending_stream.token)
                 if result.status_code == 200:
                     results.ok_responses.append(result)
                 else:
