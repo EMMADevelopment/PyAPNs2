@@ -4,7 +4,7 @@ class Response(object):
 
     def __init__(
         self, status_code, apns_id,
-        timestamp=None, reason=None,
+        timestamp=None, reason=None, error = None
     ):
 
         # The HTTP status code retuened by APNs.
@@ -26,3 +26,13 @@ class Response(object):
         # If the value of StatusCode is 410, this is the last time at which APNs
         # confirmed that the device token was no longer valid for the topic.
         self.timestamp = timestamp
+
+        # if any error occurs when generating the response.
+        self.error = error
+
+    def __str__(self):
+        if self.error:
+            return "APNs response: apns_id: %s, status: %s, timestamp: %s, reason: %s" \
+                   % (self.apns_id, str(self.status_code), str(self.timestamp), self.reason)
+        else:
+            return "Error getting response: %s" % (str(self.error))

@@ -115,23 +115,23 @@ class APNsConnection(object):
         return stream_id
 
     def get_notification_result(self, stream_id):
+        apns_response = self._connection.get_response(stream_id)
+
+        apns_ids = apns_response.headers["apns-id"]
+        apns_id = apns_ids[0] if apns_ids else None
+        response = Response(status_code=apns_response.status, apns_id=apns_id)
+
         try:
-            apns_response = self._connection.get_response(stream_id)
-
-            apns_ids = apns_response.headers["apns-id"]
-            apns_id = apns_ids[0] if apns_ids else None
-            response = Response(status_code=apns_response.status, apns_id=apns_id)
-
             if apns_response.status != 200:
                 raw_data = apns_response.read().decode('utf-8')
                 data = json.loads(raw_data)
                 response.reason = data["reason"]
                 response.timestamp = data.get("timestamp")
 
-            return response, None
-
         except Exception as e:
-            return None, e
+            response.error = e
+
+        return response
 
     def is_connected(self):
         return self._connection is not None
