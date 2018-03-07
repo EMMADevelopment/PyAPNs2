@@ -39,7 +39,7 @@ class Response(object):
 
     def __str__(self):
         if self.error is None:
-            return "APNs response: apns_id: %s, status: %s, token: %s,timestamp: %s, reason: %s" \
+            return "APNs response: apns_id: %s, status: %s, token: %s, timestamp: %s, reason: %s" \
                    % (self.apns_id, str(self.status_code), self.token, str(self.timestamp), self.reason)
         else:
             return "Error getting response: %s" % (str(self.error))
