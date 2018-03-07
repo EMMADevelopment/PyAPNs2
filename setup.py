@@ -16,7 +16,7 @@ except ImportError:
 
 setup(
     name='apns2',
-    version='0.4.1',
+    version='0.4.2',
     packages=['apns2'],
     install_requires=dependencies,
     url='https://github.com/EMMADevelopment/PyAPNs2.git',

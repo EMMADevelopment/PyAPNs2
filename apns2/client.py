@@ -8,7 +8,7 @@ from .errors import ConnectionFailed
 # We don't generally need to know about the Credentials subclasses except to
 # keep the old API, where APNsClient took a cert_file
 from .credentials import CertificateCredentials
-from response import Response
+from response import Response, BatchResponse
 
 
 class NotificationPriority(Enum):
@@ -166,7 +166,8 @@ class APNsConnection(object):
         # frame before starting to send notifications.
         self._connect()
 
-        results = {}
+        results = BatchResponse()
+
         open_streams = collections.deque()
         # Loop on the tokens, sending as many requests as possible concurrently to APNs.
         # When reaching the maximum concurrent streams limit, wait for a response before sending
@@ -191,8 +192,12 @@ class APNsConnection(object):
                 # to return a response.
                 pending_stream = open_streams.popleft()
                 result = self.get_notification_result(pending_stream.stream_id)
+                if result.status_code == 200:
+                    results.ok_responses.append(result)
+                else:
+                    results.ko_responses.append(results)
+
                 logger.info('Got response for %s: %s', pending_stream.token, result)
-                results[pending_stream.token] = result
 
         return results
 

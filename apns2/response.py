@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import collections
+
 class Response(object):
 
     def __init__(
@@ -36,3 +38,16 @@ class Response(object):
                    % (self.apns_id, str(self.status_code), str(self.timestamp), self.reason)
         else:
             return "Error getting response: %s" % (str(self.error))
+
+
+class BatchResponse(object):
+
+    def __init__(self):
+        self.ko_responses = collections.deque()
+        self.ok_responses = collections.deque()
+
+    def print_kos(self):
+        return '\n'.join(str(p) for p in self.ko_responses)
+
+    def print_oks(self):
+        return '\n'.join(str(p) for p in self.ok_responses)
