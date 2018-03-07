@@ -195,7 +195,7 @@ class APNsConnection(object):
                 if result.status_code == 200:
                     results.ok_responses.append(result)
                 else:
-                    results.ko_responses.append(results)
+                    results.ko_responses.append(result)
 
                 logger.info('Got response for %s: %s', pending_stream.token, result)
 
