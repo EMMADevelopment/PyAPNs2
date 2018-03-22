@@ -193,9 +193,9 @@ class APNsConnection(object):
                 pending_stream = open_streams.popleft()
                 result = self.get_notification_result(pending_stream.stream_id, pending_stream.token)
                 if result.status_code == 200:
-                    results.ok_responses.append(result)
+                    results.append_ok(result)
                 else:
-                    results.ko_responses.append(result)
+                    results.append_ko(result)
 
                 logger.info('Got response for %s: %s', pending_stream.token, result)
 

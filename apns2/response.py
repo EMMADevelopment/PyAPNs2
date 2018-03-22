@@ -63,6 +63,12 @@ class BatchResponse(object):
     def ok_responses(self):
         return self._ok_responses
 
+    def append_ko(self, response):
+        return self._ko_responses.append(response)
+
+    def append_ok(self, response):
+        return self._ok_responses.append(response)
+
     def responses(self):
         responses = collections.deque()
         responses.extend(self._ok_responses)
