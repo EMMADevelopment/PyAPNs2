@@ -48,29 +48,29 @@ class Response(object):
 class BatchResponse(object):
 
     def __init__(self):
-        self._ko_responses = collections.deque()
-        self._ok_responses = collections.deque()
+        self.correct_responses = collections.deque()
+        self.bad_responses = collections.deque()
 
     def print_kos(self):
-        return '\n'.join(str(p) for p in self._ko_responses)
+        return '\n'.join(str(p) for p in self.bad_responses)
 
     def print_oks(self):
-        return '\n'.join(str(p) for p in self._ok_responses)
+        return '\n'.join(str(p) for p in self.correct_responses)
 
     def ko_responses(self):
-        return self._ko_responses
+        return self.bad_responses
 
     def ok_responses(self):
-        return self._ok_responses
+        return self.correct_responses
 
     def append_ko(self, response):
-        return self._ko_responses.append(response)
+        return self.bad_responses.append(response)
 
     def append_ok(self, response):
-        return self._ok_responses.append(response)
+        return self.correct_responses.append(response)
 
     def responses(self):
         responses = collections.deque()
-        responses.extend(self._ok_responses)
-        responses.extend(self._ko_responses)
+        responses.extend(self.correct_responses)
+        responses.extend(self.bad_responses)
         return responses
