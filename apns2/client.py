@@ -8,7 +8,7 @@ from .errors import ConnectionFailed
 # We don't generally need to know about the Credentials subclasses except to
 # keep the old API, where APNsClient took a cert_file
 from .credentials import CertificateCredentials
-from response import Response, BatchResponse
+from .response import Response, BatchResponse
 
 
 class NotificationPriority(Enum):
@@ -54,7 +54,7 @@ class APNsClient(object):
 
 class APNsConnection(object):
 
-    SANDBOX_SERVER = 'api.development.push.apple.com'
+    SANDBOX_SERVER = 'api.sandbox.push.apple.com'
     LIVE_SERVER = 'api.push.apple.com'
 
     DEFAULT_PORT = 443
