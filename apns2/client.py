@@ -17,6 +17,15 @@ from .response import Response, BatchResponse
 from .payload import Payload
 
 
+class NotificationType(Enum):
+    Alert = 'alert'
+    Background = 'background'
+    VoIP = 'voip'
+    Complication = 'complication'
+    FileProvider = 'fileprovider'
+    MDM = 'mdm'
+
+
 class NotificationPriority(Enum):
     Immediate = '10'
     Delayed = '5'
@@ -109,7 +118,8 @@ class APNsConnection(object):
 
     def send_notification_async(self, token_hex: str, notification: Payload, topic: Optional[str],
                                 priority=NotificationPriority.Immediate,
-                                expiration: Optional[int] = None, collapse_id: Optional[str] = None) -> int:
+                                expiration: Optional[int] = None, collapse_id: Optional[str] = None,
+                                push_type: Optional[NotificationType] = None) -> int:
 
         if not self.is_connected():
             raise ConnectionFailed("Can't send push. "
@@ -118,11 +128,28 @@ class APNsConnection(object):
         json_str = json.dumps(notification.dict(), cls=self.__options.json_encoder, ensure_ascii=False, separators=(',', ':'))
         json_payload = json_str.encode('utf-8')
 
-        headers = {
-            'apns-push-type': notification.push_type
-        }
+        headers = {}
+
+        inferred_push_type = None  # type: Optional[str]
         if topic is not None:
             headers['apns-topic'] = topic
+
+            if topic.endswith('.voip'):
+                inferred_push_type = NotificationType.VoIP.value
+            elif topic.endswith('.complication'):
+                inferred_push_type = NotificationType.Complication.value
+            elif topic.endswith('.pushkit.fileprovider'):
+                inferred_push_type = NotificationType.FileProvider.value
+            elif any([notification.alert, notification.badge, notification.sound]):
+                inferred_push_type = NotificationType.Alert.value
+            else:
+                inferred_push_type = NotificationType.Background.value
+
+        if push_type:
+            inferred_push_type = push_type.value
+
+        if inferred_push_type:
+            headers['apns-push-type'] = inferred_push_type
 
         if priority != DEFAULT_APNS_PRIORITY:
             headers['apns-priority'] = priority.value
@@ -169,7 +196,8 @@ class APNsConnection(object):
 
     def send_notification_batch(self, notifications: Iterable[Notification], topic: Optional[str] = None,
                                 priority: NotificationPriority = NotificationPriority.Immediate,
-                                expiration: Optional[int] = None, collapse_id: Optional[str] = None) -> BatchResponse:
+                                expiration: Optional[int] = None, collapse_id: Optional[str] = None,
+                                push_type: Optional[NotificationType] = None) -> BatchResponse:
         """
         Send a notification to a list of tokens in batch. Instead of sending a synchronous request
         for each token, send multiple requests concurrently. This is done on the same connection,
@@ -207,7 +235,7 @@ class APNsConnection(object):
             if next_notification is not None and len(open_streams) < self.__max_concurrent_streams:
                 logger.info('Sending to token %s', next_notification.token)
                 stream_id = self.send_notification_async(next_notification.token, next_notification.payload, topic,
-                                                         priority, expiration, collapse_id)
+                                                         priority, expiration, collapse_id, push_type)
                 open_streams.append(RequestStream(stream_id, next_notification.token))
 
                 next_notification = next(notification_iterator, None)
