@@ -4,12 +4,12 @@ from setuptools import setup
 
 setup(
     name='apns2',
-    version='0.5.0',
+    version='0.6.0',
     packages=['apns2'],
     install_requires=[
-    'hyper>=0.7',
-    'PyJWT>=1.4.0',
-    'cryptography>=1.7.2',
+        'hyper>=0.7',
+        'PyJWT>=1.4.0',
+        'cryptography>=1.7.2',
     ],
     url='https://github.com/EMMADevelopment/PyAPNs2.git',
     license='MIT',

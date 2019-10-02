@@ -118,7 +118,9 @@ class APNsConnection(object):
         json_str = json.dumps(notification.dict(), cls=self.__options.json_encoder, ensure_ascii=False, separators=(',', ':'))
         json_payload = json_str.encode('utf-8')
 
-        headers = {}
+        headers = {
+            'apns-push-type': notification.push_type
+        }
         if topic is not None:
             headers['apns-topic'] = topic
 
