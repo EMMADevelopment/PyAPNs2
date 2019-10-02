@@ -11,6 +11,7 @@ Either download the source from GitHub or use easy_install:
 ## Sample usage
 
 ```python
+import collections
 from apns2.client import APNsClient
 from apns2.payload import Payload
 
@@ -19,6 +20,23 @@ payload = Payload(alert="Hello World!", sound="default", badge=1)
 topic = 'com.example.App'
 client = APNsClient('key.pem', use_sandbox=False, use_alternative_port=False)
 client.send_notification(token_hex, payload, topic)
+
+# To send multiple notifications in a batch
+Notification = collections.namedtuple('Notification', ['token', 'payload'])
+notifications = [Notification(payload=payload, token=token_hex)]
+client.send_notification_batch(notifications=notifications, topic=topic)
+
+# To use token based authentication
+from apns2.credentials import TokenCredentials
+
+auth_key_path = 'path/to/auth_key'
+auth_key_id = 'app_auth_key_id'
+team_id = 'app_team_id'
+token_credentials = TokenCredentials(auth_key_path=auth_key_path, auth_key_id=auth_key_id, team_id=team_id)
+client = APNsClient(credentials=token_credentials, use_sanbox=False)
+client.send_notification_batch(notifications=notifications, topic=topic)
+
+
 ```
 
 ## Further Info
@@ -46,8 +64,9 @@ python -m unittest discover test
 
 You can use `tox` for running tests with all supported Python versions:
 ```shell
-pyenv install 2.7.13 && pyenv install 3.4.6 && pyenv install 3.5.3 & pyenv install 3.6.0
-pyenv local 3.6.0 3.5.3 3.4.6 2.7.13
+pyenv install 2.7.15; pyenv install 3.4.9; pyenv install 3.5.6; pyenv install 3.6.7; pyenv install 3.7.1
+pyenv local 3.7.1 3.6.7 3.5.6 3.4.9 2.7.15
+pip install tox
 tox
 ```
 
