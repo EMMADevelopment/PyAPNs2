@@ -86,7 +86,7 @@ class TokenCredentials(Credentials):
             }
             jwt_token = jwt.encode(token_dict, self.__auth_key,
                                    algorithm=self.__encryption_algorithm,
-                                   headers=headers).decode('ascii')
+                                   headers=headers)
 
             self.__topicTokens[topic] = (issued_at, jwt_token)
             return jwt_token
