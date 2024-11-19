@@ -3,7 +3,17 @@ import jwt
 
 from typing import Optional, Tuple, TYPE_CHECKING
 
-
+#hyper needs the four following aliases to be done manually.
+from collections.abc import Iterable as IterableOld
+from collections.abc import Mapping as MappingOld
+from collections.abc import MutableSet as MutableSetOld
+from collections.abc import MutableMapping as MutableMappingOld
+import collections
+collections.Iterable = IterableOld
+collections.Mapping = MappingOld
+collections.MutableSet = MutableSetOld
+collections.MutableMapping = MutableMappingOld
+#Now import hyper
 from hyper import HTTP20Connection  # type: ignore
 from hyper.tls import init_context  # type: ignore
 
